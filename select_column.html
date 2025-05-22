@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>选择到期日期列</title>
+</head>
+<body>
+    <h2>请选择到期日期所在列</h2>
+    <form method="post" action="/remind">
+        <select name="column">
+            {% for col in columns %}
+                <option value="{{ col }}">{{ col }}</option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="filename" value="{{ filename }}">
+        <button type="submit">确定</button>
+    </form>
+</body>
+</html>
