@@ -81,7 +81,11 @@ def check_expired():
         except:
             continue
     return f"扫描完成，共提醒 {len(summary)} 项。"
-
+    @app.route('/files')
+def list_files():
+    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    files = [f for f in files if f.endswith('.xlsx')]
+    return render_template('files.html', files=files)
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
