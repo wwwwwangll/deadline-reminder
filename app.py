@@ -47,14 +47,14 @@ def upload():
             return redirect(url_for('list_files'))
     return render_template('index.html')
 
-# 文件展示页面
+# 文件展示页面（保留这一段，已修复重复定义）
 @app.route('/files')
 def list_files():
     files = os.listdir(app.config['UPLOAD_FOLDER'])
     files = [f for f in files if f.endswith('.csv')]
     return render_template('files.html', files=files)
 
-# 自动检测页面（每次访问可触发邮件逻辑）
+# 自动检测页面
 @app.route('/check')
 def check_expired():
     today = pd.to_datetime('today').normalize()
@@ -81,11 +81,7 @@ def check_expired():
         except:
             continue
     return f"扫描完成，共提醒 {len(summary)} 项。"
-@app.route('/files')
-def list_files():
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
-    files = [f for f in files if f.endswith('.xlsx')]
-    return render_template('files.html', files=files)
+
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
