@@ -70,3 +70,14 @@ def result():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000, debug=True)  # 确保已指定端口
+    import os
+from flask import Flask
+
+app = Flask(__name__)
+
+# ...你的路由和逻辑...
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
+
