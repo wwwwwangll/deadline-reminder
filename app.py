@@ -68,8 +68,7 @@ def result():
         content = "有以下到期数据：\n" + expired_rows.to_string(index=False)
         send_email("到期数据提醒", content)
 
-    return render_template('result.html', tables=[expired_rows.to_html(classes='data', index=False)], titles=expired_rows.columns.values)
-
+    return render_template('result.html', items=expired_rows)
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
