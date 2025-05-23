@@ -2,14 +2,13 @@ name: Daily Reminder Trigger
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天 UTC 0 点，对应北京时间早上 8 点
-  workflow_dispatch:     # 支持手动触发
+    - cron: '0 0 * * *'  # 每天 UTC 0 点（北京时间早上 8 点）
+  workflow_dispatch:      # 手动触发支持
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Trigger /check endpoint
+      - name: Curl to /check endpoint
         run: |
-          curl https://deadline-reminder.onrender.com/check
+          curl -sSf https://deadline-reminder.onrender.com/check
