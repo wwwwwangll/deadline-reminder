@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>到期提醒结果</title>
+</head>
+<body>
+    <h2>以下项目已到期或今天到期：</h2>
+    <table border="1">
+        <tr>
+            {% for col in items.columns %}
+                <th>{{ col }}</th>
+            {% endfor %}
+        </tr>
+        {% for _, row in items.iterrows() %}
+        <tr>
+            {% for cell in row %}
+                <td>{{ cell }}</td>
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+    <a href="/">返回上传页面</a>
+</body>
+</html>
