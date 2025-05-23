@@ -1,16 +1,14 @@
 import os
 import pandas as pd
 import smtplib
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 from email.mime.text import MIMEText
 from email.header import Header
 
-# 初始化 Flask
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# 创建上传目录
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -36,39 +34,54 @@ def send_email(subject, content):
     except Exception as e:
         print("❌ 邮件发送失败：", e)
 
-# 首页上传页面
+# 首页上传逻辑
 @app.route('/', methods=['GET', 'POST'])
-def index():
+def upload():
     if request.method == 'POST':
         file = request.files['file']
         if file and file.filename.endswith('.xlsx'):
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-            file.save(filepath)
-            df = pd.read_excel(filepath)
-            columns = df.columns.tolist()
-            return render_template('select_column.html', columns=columns, filename=file.filename)
+            filename = os.path.splitext(file.filename)[0]
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename + '.csv')
+            df = pd.read_excel(file)
+            df.to_csv(filepath, index=False)
+            return redirect(url_for('list_files'))
     return render_template('index.html')
 
-# 表格选择后处理页面
-@app.route('/result', methods=['POST'])
-def result():
-    column_name = request.form['column']
-    filename = request.form['filename']
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    df = pd.read_excel(filepath)
+# 文件展示页面
+@app.route('/files')
+def list_files():
+    files = os.listdir(app.config['UPLOAD_FOLDER'])
+    files = [f for f in files if f.endswith('.csv')]
+    return render_template('files.html', files=files)
 
+# 自动检测页面（每次访问可触发邮件逻辑）
+@app.route('/check')
+def check_expired():
     today = pd.to_datetime('today').normalize()
-    try:
-        df[column_name] = pd.to_datetime(df[column_name])
-        expired_rows = df[df[column_name] < today]
-    except Exception as e:
-        return f"日期列解析错误：{e}"
+    notify_threshold = today + pd.Timedelta(days=10)
+    summary = []
 
-    if not expired_rows.empty:
-        content = "有以下到期数据：\n" + expired_rows.to_string(index=False)
-        send_email("到期数据提醒", content)
+    for fname in os.listdir(UPLOAD_FOLDER):
+        if not fname.endswith('.csv'):
+            continue
+        path = os.path.join(UPLOAD_FOLDER, fname)
+        try:
+            df = pd.read_csv(path)
+            for col in df.columns:
+                try:
+                    dates = pd.to_datetime(df[col], errors='coerce')
+                    expired = df[dates < notify_threshold]
+                    expired = expired[dates.notna()]
+                    if not expired.empty:
+                        summary.append((fname, col, expired))
+                        content = f"文件 {fname} 的列 {col} 中有以下即将到期数据：\n" + expired.to_string(index=False)
+                        send_email(f"{fname} 到期提醒", content)
+                except:
+                    continue
+        except:
+            continue
+    return f"扫描完成，共提醒 {len(summary)} 项。"
 
-    return render_template('result.html', items=expired_rows)
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
