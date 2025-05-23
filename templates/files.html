@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>文件列表</title>
+</head>
+<body>
+    <h2>所有上传的 Excel 文件（CSV格式）</h2>
+    <ul>
+        {% for file in files %}
+        <li>{{ file }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/">返回上传</a> |
+    <a href="/check">立即触发检查</a>
+</body>
+</html>
