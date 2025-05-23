@@ -8,9 +8,13 @@
     <h2>所有上传的 Excel 文件（CSV格式）</h2>
     <ul>
         {% for file in files %}
-        <li>{{ file }}</li>
+            <li>
+                {{ file }}
+                <a href="{{ url_for('view_file', filename=file) }}">查看</a>
+            </li>
         {% endfor %}
     </ul>
+    <br>
     <a href="/">返回上传</a> |
     <a href="/check">立即触发检查</a>
 </body>
