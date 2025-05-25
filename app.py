@@ -81,7 +81,16 @@ def check_expired():
         except:
             continue
     return f"扫描完成，共提醒 {len(summary)} 项。"
-
+@app.route('/view/<filename>')
+def view_file(filename):
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(path):
+        return f"文件 {filename} 不存在"
+    try:
+        df = pd.read_csv(path)
+        return render_template('view.html', filename=filename, table=df.to_html(index=False, classes='data'))
+    except Exception as e:
+        return f"读取文件失败：{e}"
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
