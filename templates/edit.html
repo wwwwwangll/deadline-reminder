@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>编辑文件</title>
+</head>
+<body>
+    <h2>正在编辑：{{ filename }}</h2>
+    <form method="post">
+        <textarea name="content" rows="20" cols="100">{{ content }}</textarea><br><br>
+        <input type="submit" value="保存修改">
+    </form>
+    <br>
+    <a href="/files">返回文件列表</a>
+</body>
+</html>
