@@ -7,18 +7,23 @@ import smtplib
 from flask import Flask, render_template, request, redirect, url_for
 from email.mime.text import MIMEText
 from email.header import Header
+from markupsafe import Markup
 
 app = Flask(__name__)
-# Render 给你的数据库连接地址，格式类似：
 postgresql://deadline_db_ikib_user:TjODVsAqZ9FFv8hZdQUVSW3F2JRSiblE@dpg-d0pik6emcj7s73e6k6eg-a/deadline_db_ikib
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://xxxx:xxxx@xxxx.compute.amazonaws.com:5432/xxxx'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['UPLOAD_FOLDER'] = 'uploads'
 db = SQLAlchemy(app)
-UPLOAD_FOLDER = 'uploads'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# 数据库模型
+class Record(db.Model):
+    id = Column(Integer, primary_key=True)
+    filename = Column(String(128))
+    due_date = Column(Date)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
 
 # 邮件发送函数
 def send_email(subject, content):
@@ -42,53 +47,41 @@ def send_email(subject, content):
     except Exception as e:
         print("❌ 邮件发送失败：", e)
 
-# 首页上传逻辑
 @app.route('/', methods=['GET', 'POST'])
 def upload():
     if request.method == 'POST':
         file = request.files['file']
         if file and file.filename.endswith('.xlsx'):
-            filename = os.path.splitext(file.filename)[0]
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename + '.csv')
             df = pd.read_excel(file)
-            df.to_csv(filepath, index=False)
+            filename = file.filename
+            for _, row in df.iterrows():
+                try:
+                    due_date = pd.to_datetime(row['到期日期'], errors='coerce')
+                    if pd.notna(due_date):
+                        record = Record(filename=filename, due_date=due_date)
+                        db.session.add(record)
+                except Exception as e:
+                    print(f"skip: {e}")
+            db.session.commit()
             return redirect(url_for('list_files'))
     return render_template('index.html')
 
-# 文件展示页面（保留这一段，已修复重复定义）
 @app.route('/files')
 def list_files():
     files = os.listdir(app.config['UPLOAD_FOLDER'])
     files = [f for f in files if f.endswith('.csv')]
     return render_template('files.html', files=files)
 
-# 自动检测页面
 @app.route('/check')
 def check_expired():
     today = pd.to_datetime('today').normalize()
     notify_threshold = today + pd.Timedelta(days=10)
-    summary = []
+    records = Record.query.filter(Record.due_date < notify_threshold).all()
+    if records:
+        content = "\n".join([f"{r.filename} - {r.due_date}" for r in records])
+        send_email("数据库到期提醒", content)
+    return f"扫描完成，共提醒 {len(records)} 项。"
 
-    for fname in os.listdir(UPLOAD_FOLDER):
-        if not fname.endswith('.csv'):
-            continue
-        path = os.path.join(UPLOAD_FOLDER, fname)
-        try:
-            df = pd.read_csv(path)
-            for col in df.columns:
-                try:
-                    dates = pd.to_datetime(df[col], errors='coerce')
-                    expired = df[dates < notify_threshold]
-                    expired = expired[dates.notna()]
-                    if not expired.empty:
-                        summary.append((fname, col, expired))
-                        content = f"文件 {fname} 的列 {col} 中有以下即将到期数据：\n" + expired.to_string(index=False)
-                        send_email(f"{fname} 到期提醒", content)
-                except:
-                    continue
-        except:
-            continue
-    return f"扫描完成，共提醒 {len(summary)} 项。"
 @app.route('/view/<filename>')
 def view_file(filename):
     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -99,7 +92,7 @@ def view_file(filename):
         return render_template('view.html', filename=filename, table=df.to_html(index=False, classes='data'))
     except Exception as e:
         return f"读取文件失败：{e}"
-from markupsafe import Markup
+
 @app.route('/edit/<filename>', methods=['GET', 'POST'])
 def edit_file(filename):
     path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -112,12 +105,9 @@ def edit_file(filename):
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         return render_template('edit.html', filename=filename, content=content)
+
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # ✅ 第一次运行时建表
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
-# 启动应用
-if __name__ == '__main__':
+        db.create_all()
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
