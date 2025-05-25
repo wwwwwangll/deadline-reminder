@@ -1,3 +1,6 @@
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import Column, Integer, String, Date, DateTime
+from datetime import datetime
 import os
 import pandas as pd
 import smtplib
