@@ -91,6 +91,19 @@ def view_file(filename):
         return render_template('view.html', filename=filename, table=df.to_html(index=False, classes='data'))
     except Exception as e:
         return f"读取文件失败：{e}"
+from flask import Markup
+@app.route('/edit/<filename>', methods=['GET', 'POST'])
+def edit_file(filename):
+    path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if request.method == 'POST':
+        content = request.form['content']
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return redirect(url_for('list_files'))
+    else:
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        return render_template('edit.html', filename=filename, content=content)
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
