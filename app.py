@@ -9,6 +9,11 @@ from email.mime.text import MIMEText
 from email.header import Header
 
 app = Flask(__name__)
+# Render 给你的数据库连接地址，格式类似：
+postgresql://deadline_db_ikib_user:TjODVsAqZ9FFv8hZdQUVSW3F2JRSiblE@dpg-d0pik6emcj7s73e6k6eg-a/deadline_db_ikib
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://xxxx:xxxx@xxxx.compute.amazonaws.com:5432/xxxx'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -107,6 +112,11 @@ def edit_file(filename):
         with open(path, 'r', encoding='utf-8') as f:
             content = f.read()
         return render_template('edit.html', filename=filename, content=content)
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()  # ✅ 第一次运行时建表
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
 # 启动应用
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 10000))
